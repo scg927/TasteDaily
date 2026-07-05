@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="seed">#FFB5340A</color>
+    <color name="warm_primary">#FFB5340A</color>
+    <color name="warm_on_primary">#FFFFFFFF</color>
+    <color name="warm_surface">#FFFBF6F1</color>
+    <color name="warm_background">#FFFBF6F1</color>
+    <color name="ic_launcher_background">#FFB5340A</color>
+</resources>
