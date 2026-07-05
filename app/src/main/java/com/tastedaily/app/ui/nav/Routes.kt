@@ -1,6 +1,8 @@
 package com.tastedaily.app.ui.nav
 
 object Routes {
+    const val CALENDAR = "calendar"
+    const val BROWSE = "browse"
     const val HOME = "home"
     const val DETAIL = "detail/{dishId}"
     const val IMMERSIVE = "immersive/{dishId}"

@@ -3,6 +3,7 @@ package com.tastedaily.app.data.repository
 import com.tastedaily.core.domain.DailyDishSelector
 import com.tastedaily.core.model.Dish
 import com.tastedaily.core.model.VideoAsset
+import java.time.LocalDate
 
 class RecipeRepository(
     private val selector: DailyDishSelector,
@@ -10,7 +11,11 @@ class RecipeRepository(
 ) {
     fun todayDish(): Dish = selector.todayDish()
 
+    fun dishForDate(date: LocalDate): Dish = selector.dishFor(date)
+
     fun recentDishes(count: Int): List<Dish> = selector.recentDishes(count)
+
+    fun allDishes(): List<Dish> = catalog
 
     fun dishById(id: String): Dish? = catalog.firstOrNull { it.id == id }
 
