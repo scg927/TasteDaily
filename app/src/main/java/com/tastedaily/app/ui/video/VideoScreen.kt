@@ -74,7 +74,10 @@ fun VideoScreen(
                 .padding(padding),
             contentAlignment = Alignment.Center,
         ) {
-            video?.let { VideoPlayer(videoUrl = it.videoUrl) }
+            video?.let { VideoPlayer(videoUrl = it.videoUrl) } ?: run {
+                // 视频资源不存在时显示占位，不崩溃
+                Text("视频资源不可用", color = Color.White.copy(alpha = 0.6f))
+            }
         }
     }
 }

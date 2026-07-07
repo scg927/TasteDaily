@@ -208,6 +208,7 @@ private fun StepMedia(step: CookingStep) {
     val videoUrl = step.videoUrl
     val imageUrl = step.imageUrl
     if (videoUrl != null) {
+        // VideoPlayer 内部已做异常捕获与错误占位，这里直接调用即可
         VideoPlayer(
             videoUrl = videoUrl,
             modifier = Modifier.fillMaxSize(),
