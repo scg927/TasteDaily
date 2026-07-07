@@ -25,6 +25,8 @@ import com.tastedaily.app.ui.browse.BrowseScreen
 import com.tastedaily.app.ui.calendar.CalendarScreen
 import com.tastedaily.app.ui.detail.DetailScreen
 import com.tastedaily.app.ui.immersive.ImmersiveCookingScreen
+import com.tastedaily.app.ui.meal.MealDetailScreen
+import com.tastedaily.app.ui.shopping.ShoppingListScreen
 import com.tastedaily.app.ui.video.VideoScreen
 
 private data class BottomTab(
@@ -78,6 +80,7 @@ fun TasteDailyNavGraph() {
         ) {
             composable(Routes.CALENDAR) {
                 CalendarScreen(
+                    onMealClick = { date, mealType -> navController.navigate(Routes.mealDetail(date, mealType)) },
                     onDishClick = { id -> navController.navigate(Routes.detail(id)) },
                 )
             }
@@ -90,6 +93,7 @@ fun TasteDailyNavGraph() {
 
             composable(Routes.HOME) {
                 CalendarScreen(
+                    onMealClick = { date, mealType -> navController.navigate(Routes.mealDetail(date, mealType)) },
                     onDishClick = { id -> navController.navigate(Routes.detail(id)) },
                 )
             }
@@ -104,6 +108,7 @@ fun TasteDailyNavGraph() {
                     onBack = { navController.popBackStack() },
                     onStartImmersive = { navController.navigate(Routes.immersive(dishId)) },
                     onPlayVideo = { videoId -> navController.navigate(Routes.video(videoId)) },
+                    onShoppingList = { id -> navController.navigate(Routes.shoppingList(id)) },
                 )
             }
 
@@ -125,6 +130,34 @@ fun TasteDailyNavGraph() {
                 val videoId = backStackEntry.arguments?.getString("videoId").orEmpty()
                 VideoScreen(
                     videoId = videoId,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = Routes.MEAL_DETAIL,
+                arguments = listOf(
+                    navArgument("date") { type = NavType.StringType },
+                    navArgument("mealType") { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val date = backStackEntry.arguments?.getString("date").orEmpty()
+                val mealType = backStackEntry.arguments?.getString("mealType").orEmpty()
+                MealDetailScreen(
+                    dateStr = date,
+                    mealTypeStr = mealType,
+                    onBack = { navController.popBackStack() },
+                    onDishClick = { id -> navController.navigate(Routes.detail(id)) },
+                )
+            }
+
+            composable(
+                route = Routes.SHOPPING_LIST,
+                arguments = listOf(navArgument("dishId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val dishId = backStackEntry.arguments?.getString("dishId").orEmpty()
+                ShoppingListScreen(
+                    dishId = dishId,
                     onBack = { navController.popBackStack() },
                 )
             }

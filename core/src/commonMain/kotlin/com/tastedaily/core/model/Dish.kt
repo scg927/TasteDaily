@@ -16,7 +16,22 @@ data class Dish(
     val steps: List<CookingStep>,
     /** yyyy-MM-dd if the dish is pinned to a specific date, null if it can be freely scheduled. */
     val publishedDate: String? = null,
-)
+    /** 餐类：早餐/中餐/晚餐/通用 */
+    val mealType: MealType = MealType.ANY,
+    /** 预估成本（元），若为 null 则自动从 ingredients 汇总 */
+    val estimatedCostYuan: Double? = null,
+) {
+    /** 计算总成本：优先使用 estimatedCostYuan，否则从食材汇总 */
+    val totalCostYuan: Double
+        get() = estimatedCostYuan ?: ingredients.sumOf { it.estimatedPriceYuan }
+}
+
+enum class MealType(val label: String) {
+    BREAKFAST("早餐"),
+    LUNCH("中餐"),
+    DINNER("晚餐"),
+    ANY("通用"),
+}
 
 enum class Difficulty(val label: String) {
     EASY("简单"),
@@ -24,7 +39,12 @@ enum class Difficulty(val label: String) {
     HARD("较难"),
 }
 
-data class Ingredient(val name: String, val amount: String)
+data class Ingredient(
+    val name: String,
+    val amount: String,
+    /** 预估单价（元），默认 0 */
+    val estimatedPriceYuan: Double = 0.0,
+)
 
 data class Article(
     val title: String,

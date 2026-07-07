@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tastedaily.app.data.AppContainer
 import com.tastedaily.app.data.repository.RecipeRepository
-import com.tastedaily.core.model.Dish
+import com.tastedaily.core.domain.DailyMeals
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +16,7 @@ data class CalendarUiState(
     val month: YearMonth = YearMonth.now(),
     val selectedDate: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),
-    val dishForSelected: Dish? = null,
+    val mealsForSelected: DailyMeals? = null,
     val loading: Boolean = true,
 )
 
@@ -28,11 +28,11 @@ class CalendarViewModel(
     val state: StateFlow<CalendarUiState> = _state.asStateFlow()
 
     init {
-        loadDishForDate(LocalDate.now())
+        loadMealsForDate(LocalDate.now())
     }
 
     fun selectDate(date: LocalDate) {
-        loadDishForDate(date)
+        loadMealsForDate(date)
     }
 
     fun changeMonth(delta: Int) {
@@ -40,13 +40,13 @@ class CalendarViewModel(
         _state.value = _state.value.copy(month = newMonth)
     }
 
-    private fun loadDishForDate(date: LocalDate) {
+    private fun loadMealsForDate(date: LocalDate) {
         viewModelScope.launch {
             // 转换 java.time.LocalDate -> kotlinx.datetime.LocalDate（core 模块使用）
             val kxDate = kotlinx.datetime.LocalDate(date.year, date.monthValue, date.dayOfMonth)
             _state.value = _state.value.copy(
                 selectedDate = date,
-                dishForSelected = repository.dishForDate(kxDate),
+                mealsForSelected = repository.mealsForDate(kxDate),
                 loading = false,
             )
         }

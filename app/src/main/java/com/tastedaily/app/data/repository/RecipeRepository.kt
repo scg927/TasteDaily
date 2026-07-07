@@ -1,6 +1,7 @@
 package com.tastedaily.app.data.repository
 
 import com.tastedaily.core.domain.DailyDishSelector
+import com.tastedaily.core.domain.DailyMeals
 import com.tastedaily.core.model.Dish
 import com.tastedaily.core.model.VideoAsset
 import kotlinx.datetime.LocalDate
@@ -12,6 +13,10 @@ class RecipeRepository(
     fun todayDish(): Dish = selector.todayDish()
 
     fun dishForDate(date: LocalDate): Dish = selector.dishFor(date)
+
+    fun mealsForDate(date: LocalDate): DailyMeals = selector.mealsForDate(date)
+
+    fun todayMeals(): DailyMeals = selector.todayMeals()
 
     fun recentDishes(count: Int): List<Dish> = selector.recentDishes(count)
 

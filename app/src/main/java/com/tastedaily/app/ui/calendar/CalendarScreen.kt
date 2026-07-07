@@ -8,20 +8,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.BreakfastDining
+import androidx.compose.material.icons.filled.DinnerDining
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -37,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -46,8 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.tastedaily.app.ui.components.Format
+import com.tastedaily.core.domain.DailyMeals
 import com.tastedaily.core.model.Dish
+import com.tastedaily.core.model.MealType
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -57,6 +63,7 @@ import java.util.Locale
 
 @Composable
 fun CalendarScreen(
+    onMealClick: (date: String, mealType: String) -> Unit,
     onDishClick: (String) -> Unit,
     viewModel: CalendarViewModel = viewModel(),
 ) {
@@ -85,8 +92,16 @@ fun CalendarScreen(
             item { WeekdayHeader() }
             item { MonthGrid(state, onSelect = { viewModel.selectDate(it) }) }
             item {
-                state.dishForSelected?.let { dish ->
-                    SelectedDishCard(dish = dish, date = state.selectedDate, onClick = { onDishClick(dish.id) })
+                state.mealsForSelected?.let { meals ->
+                    DailyMealsSection(
+                        meals = meals,
+                        date = state.selectedDate,
+                        onMealClick = { mealType ->
+                            val dateStr = state.selectedDate.toString()
+                            onMealClick(dateStr, mealType.name)
+                        },
+                        onDishClick = onDishClick,
+                    )
                 }
             }
         }
@@ -214,67 +229,177 @@ private fun DayCell(
 }
 
 @Composable
-private fun SelectedDishCard(dish: Dish, date: LocalDate, onClick: () -> Unit) {
+private fun DailyMealsSection(
+    meals: DailyMeals,
+    date: LocalDate,
+    onMealClick: (MealType) -> Unit,
+    onDishClick: (String) -> Unit,
+) {
     val dateStr = date.format(DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.CHINA))
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Text(
-            text = "$dateStr 推荐",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
-                AsyncImage(
-                    model = dish.coverImageUrl,
-                    contentDescription = dish.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 10f),
-                )
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(dish.name, style = MaterialTheme.typography.headlineMedium)
-                    Text(
-                        dish.tagline,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Row(
-                        modifier = Modifier.padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        MetaChip(text = dish.cuisine)
-                        MetaChip(text = Format.difficultyLabel(dish.difficulty))
-                        MetaChip(text = Format.durationLabel(dish.durationMinutes))
-                        MetaChip(text = Format.caloriesLabel(dish.calories))
-                    }
-                }
-            }
+            Text(
+                text = "$dateStr 三餐安排",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "合计 ¥${String.format("%.1f", meals.totalCostYuan)}",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            )
         }
+        Spacer(Modifier.height(12.dp))
+
+        // 早餐卡片
+        MealCard(
+            title = "早餐",
+            icon = Icons.Default.BreakfastDining,
+            dishes = meals.breakfast,
+            accentColor = Color(0xFFFF9800),
+            onClick = { onMealClick(MealType.BREAKFAST) },
+            onDishClick = onDishClick,
+        )
+        Spacer(Modifier.height(10.dp))
+
+        // 中餐卡片
+        MealCard(
+            title = "中餐",
+            icon = Icons.Default.WbSunny,
+            dishes = meals.lunch,
+            accentColor = Color(0xFF4CAF50),
+            onClick = { onMealClick(MealType.LUNCH) },
+            onDishClick = onDishClick,
+        )
+        Spacer(Modifier.height(10.dp))
+
+        // 晚餐卡片
+        MealCard(
+            title = "晚餐",
+            icon = Icons.Default.DinnerDining,
+            dishes = meals.dinner,
+            accentColor = Color(0xFF9C27B0),
+            onClick = { onMealClick(MealType.DINNER) },
+            onDishClick = onDishClick,
+        )
     }
 }
 
 @Composable
-private fun MetaChip(text: String) {
-    Box(
+private fun MealCard(
+    title: String,
+    icon: ImageVector,
+    dishes: List<Dish>,
+    accentColor: Color,
+    onClick: () -> Unit,
+    onDishClick: (String) -> Unit,
+) {
+    Card(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(accentColor.copy(alpha = 0.1f))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = accentColor,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                )
+                Spacer(Modifier.weight(1f))
+                val cost = dishes.sumOf { it.totalCostYuan }
+                Text(
+                    text = "¥${String.format("%.1f", cost)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = accentColor,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            dishes.take(3).forEachIndexed { index, dish ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDishClick(dish.id) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AsyncImage(
+                        model = dish.coverImageUrl,
+                        contentDescription = dish.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            dish.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            "${dish.cuisine} · ${dish.difficulty.label}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        )
+                    }
+                    Text(
+                        text = "¥${String.format("%.1f", dish.totalCostYuan)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
+                if (index < dishes.take(3).lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(0.5.dp)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                    )
+                }
+            }
+
+            if (dishes.size > 3) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "点击查看全部 ${dishes.size} 道菜",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = accentColor,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
     }
 }

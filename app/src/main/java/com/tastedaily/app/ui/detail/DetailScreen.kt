@@ -23,12 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -65,6 +67,7 @@ fun DetailScreen(
     onBack: () -> Unit,
     onStartImmersive: () -> Unit,
     onPlayVideo: (String) -> Unit,
+    onShoppingList: (String) -> Unit,
     viewModel: DetailViewModel = viewModel(),
 ) {
     LaunchedEffect(dishId) { viewModel.load(dishId) }
@@ -129,7 +132,7 @@ fun DetailScreen(
                 }
             }
             item {
-                val tabs = listOf("简介", "文章", "视频")
+                val tabs = listOf("简介", "文章", "视频", "成本")
                 TabRow(selectedTabIndex = selectedTab) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
@@ -163,6 +166,9 @@ fun DetailScreen(
                     items(dish.videos, key = { it.id }) { video ->
                         VideoRow(video = video, onClick = { onPlayVideo(video.id) })
                     }
+                }
+                3 -> {
+                    item { CostTabContent(dish = dish, onShoppingList = { onShoppingList(dish.id) }) }
                 }
             }
         }
@@ -301,6 +307,77 @@ private fun VideoRow(video: VideoAsset, onClick: () -> Unit) {
                     .align(Alignment.BottomStart)
                     .padding(12.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun CostTabContent(dish: Dish, onShoppingList: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Text(
+            "食材成本",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(12.dp))
+
+        dish.ingredients.forEach { ingredient ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(ingredient.name, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        ingredient.amount,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                }
+                Text(
+                    "¥${String.format("%.2f", ingredient.estimatedPriceYuan)}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("预估总成本", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    "¥${String.format("%.2f", dish.totalCostYuan)}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(
+            onClick = onShoppingList,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Filled.ShoppingCart, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("查看采购清单")
         }
     }
 }
