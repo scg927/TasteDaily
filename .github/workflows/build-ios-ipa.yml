@@ -1,0 +1,129 @@
+name: Build iOS IPA
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          xcodebuild -version
+
+      # ============================================================
+      # 步骤 A：导入 Apple 代码签名证书（需先配置 Secrets）
+      # ============================================================
+      - name: Import code signing certificate
+        if: env.BUILD_CERTIFICATE_BASE64 != ''
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.P12_PASSWORD }}
+
+      # ============================================================
+      # 步骤 B：安装 Provisioning Profile（需先配置 Secrets）
+      # ============================================================
+      - name: Install provisioning profile
+        if: env.PROVISIONING_PROFILE_BASE64 != ''
+        run: |
+          PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PP_DIR"
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > "$PP_DIR/TasteDaily.mobileprovision"
+
+      # ============================================================
+      # 步骤 C：构建 Kotlin iOS Framework
+      # ============================================================
+      - name: Build iOS framework
+        run: |
+          ./gradlew :core:linkReleaseFrameworkIosArm64 --console=plain
+
+      # ============================================================
+      # 步骤 D：构建 Xcode 工程并导出 IPA
+      # 注：需要 iosApp/TasteDaily.xcodeproj 已存在
+      # ============================================================
+      - name: Build and archive iOS app
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+        run: |
+          # 如果 Xcode 工程不存在，仅产出 framework
+          if [ ! -d "iosApp/TasteDaily.xcodeproj" ]; then
+            echo "⚠️ iosApp/TasteDaily.xcodeproj 不存在，跳过 IPA 构建"
+            echo "请先在 macOS 上用 Xcode 创建 iOS 工程（详见 docs/iOS-GitHub-Actions构建指南.md）"
+            exit 0
+          fi
+
+          # 归档
+          xcodebuild archive \
+            -project iosApp/TasteDaily.xcodeproj \
+            -scheme TasteDaily \
+            -configuration Release \
+            -archivePath build/TasteDaily.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES
+
+          # 导出 IPA
+          mkdir -p build/ipa
+          cat > ExportOptions.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>ad-hoc</string>
+              <key>teamID</key>
+              <string>${{ secrets.APPLE_TEAM_ID }}</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.tastedaily.app</key>
+                  <string>TasteDaily</string>
+              </dict>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath build/TasteDaily.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/ipa
+
+      # ============================================================
+      # 步骤 E：上传产物
+      # ============================================================
+      - name: Upload IPA artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TasteDaily-ios
+          path: |
+            build/ipa/*.ipa
+            core/build/bin/iosArm64/releaseFramework/TasteDailyCore.framework
+          retention-days: 30
+
+      - name: Upload framework artifact (fallback)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TasteDailyCore-framework-only
+          path: |
+            core/build/bin/iosArm64/releaseFramework/TasteDailyCore.framework
+          retention-days: 30
