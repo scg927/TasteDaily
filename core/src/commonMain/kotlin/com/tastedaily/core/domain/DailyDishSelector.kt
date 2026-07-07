@@ -1,9 +1,13 @@
 package com.tastedaily.core.domain
 
 import com.tastedaily.core.model.Dish
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import kotlinx.datetime.Clock
 
 /**
  * Picks "today's dish" deterministically so that every user sees the same new dish on a given day,
@@ -14,19 +18,19 @@ import java.time.temporal.ChronoUnit
  */
 class DailyDishSelector(
     private val allDishes: List<Dish>,
-    private val today: () -> LocalDate = { LocalDate.now() },
+    private val today: () -> LocalDate = { Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault()) },
 ) {
     init {
         require(allDishes.isNotEmpty()) { "Dish catalog must not be empty" }
     }
 
     fun dishFor(date: LocalDate): Dish {
-        val formatted = DATE_FORMAT.format(date)
+        val formatted = date.toString() // kotlinx-datetime LocalDate.toString() = "yyyy-MM-dd"
         allDishes.firstOrNull { it.publishedDate == formatted }?.let { return it }
 
         val pool = allDishes.filter { it.publishedDate == null }.ifEmpty { allDishes }
-        val daysSinceEpoch = ChronoUnit.DAYS.between(EPOCH, date)
-        val idx = floorMod(daysSinceEpoch, pool.size.toLong()).toInt()
+        val daysSinceEpoch = daysBetween(EPOCH, date)
+        val idx = floorMod(daysSinceEpoch.toLong(), pool.size.toLong()).toInt()
         return pool[idx]
     }
 
@@ -42,9 +46,10 @@ class DailyDishSelector(
         if (count == 0) return emptyList()
         val base = today()
         val result = LinkedHashMap<String, Dish>()
-        var offset = 0L
+        var offset = 0
         while (result.size < count && offset < 365) {
-            val dish = dishFor(base.minusDays(offset))
+            val date = base.minus(DatePeriod(days = offset))
+            val dish = dishFor(date)
             if (dish.id !in result) result[dish.id] = dish
             offset++
         }
@@ -52,8 +57,23 @@ class DailyDishSelector(
     }
 
     companion object {
-        val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        private val EPOCH = LocalDate.of(2024, 1, 1)
+        val EPOCH = LocalDate(2024, 1, 1)
+
+        /**
+         * 计算两个日期之间的天数差（end - start），使用纯整数算法避免平台差异。
+         */
+        private fun daysBetween(start: LocalDate, end: LocalDate): Int {
+            // 将日期转换为自公元元年以来的天数（简化算法，适用于 Common 代码）
+            return toJulianDay(end.year, end.monthNumber, end.dayOfMonth) -
+                toJulianDay(start.year, start.monthNumber, start.dayOfMonth)
+        }
+
+        private fun toJulianDay(year: Int, month: Int, day: Int): Int {
+            val a = (14 - month) / 12
+            val y = year + 4800 - a
+            val m = month + 12 * a - 3
+            return day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045
+        }
 
         private fun floorMod(x: Long, y: Long): Long {
             val mod = x % y

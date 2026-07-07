@@ -2,8 +2,10 @@ package com.tastedaily.core.domain
 
 import com.tastedaily.core.model.Dish
 import com.tastedaily.core.seed.DishCatalog
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import kotlinx.datetime.DatePeriod
 import org.junit.Test
-import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
@@ -12,7 +14,7 @@ import kotlin.test.assertTrue
 class DailyDishSelectorTest {
 
     private val catalog = DishCatalog.all
-    private val fixedToday = LocalDate.of(2026, 7, 2)
+    private val fixedToday = LocalDate(2026, 7, 2)
 
     private fun selector(today: LocalDate = fixedToday) =
         DailyDishSelector(catalog, today = { today })
@@ -40,13 +42,13 @@ class DailyDishSelectorTest {
     fun `consecutive days yield different dishes when catalog is large enough`() {
         val s = selector()
         val today = s.todayDish()
-        val tomorrow = s.dishFor(fixedToday.plusDays(1))
+        val tomorrow = s.dishFor(fixedToday.plus(DatePeriod(days = 1)))
         assertNotEquals(today.id, tomorrow.id, "tomorrow should be a different dish")
     }
 
     @Test
     fun `pinned published date overrides scheduling`() {
-        val pinnedDate = LocalDate.of(2026, 7, 2)
+        val pinnedDate = LocalDate(2026, 7, 2)
         val pinned = catalog.first().copy(publishedDate = "2026-07-02")
         val others = catalog.drop(1)
         val s = DailyDishSelector(listOf(pinned) + others, today = { pinnedDate })
@@ -69,7 +71,7 @@ class DailyDishSelectorTest {
 
     @Test
     fun `selection wraps around across years without crashing`() {
-        val s = selector(today = LocalDate.of(2030, 12, 30))
+        val s = selector(today = LocalDate(2030, 12, 30))
         val dish = s.todayDish()
         assertTrue(catalog.any { it.id == dish.id })
     }

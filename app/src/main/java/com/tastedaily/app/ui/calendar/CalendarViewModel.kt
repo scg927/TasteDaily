@@ -42,9 +42,11 @@ class CalendarViewModel(
 
     private fun loadDishForDate(date: LocalDate) {
         viewModelScope.launch {
+            // 转换 java.time.LocalDate -> kotlinx.datetime.LocalDate（core 模块使用）
+            val kxDate = kotlinx.datetime.LocalDate(date.year, date.monthValue, date.dayOfMonth)
             _state.value = _state.value.copy(
                 selectedDate = date,
-                dishForSelected = repository.dishForDate(date),
+                dishForSelected = repository.dishForDate(kxDate),
                 loading = false,
             )
         }

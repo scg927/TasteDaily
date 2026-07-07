@@ -3,7 +3,7 @@ package com.tastedaily.app.data.repository
 import com.tastedaily.core.domain.DailyDishSelector
 import com.tastedaily.core.model.Dish
 import com.tastedaily.core.model.VideoAsset
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 class RecipeRepository(
     private val selector: DailyDishSelector,

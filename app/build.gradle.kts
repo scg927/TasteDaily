@@ -12,8 +12,8 @@ android {
         applicationId = "com.tastedaily.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.0.1"
+        versionCode = 4
+        versionName = "3.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
@@ -62,6 +62,9 @@ dependencies {
     implementation("androidx.media3:media3-common:1.4.0")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // 跨平台日期库（core 模块使用 kotlinx-datetime，app 需同步引入）
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
